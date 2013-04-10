@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-//string to uint64
 func ParseUint(s string, def ...uint64) uint64 {
 	if s == "" {
 		if len(def) > 0 {
