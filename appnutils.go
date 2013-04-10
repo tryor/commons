@@ -6,7 +6,7 @@ import (
 )
 
 import (
-	"trygo/ssss"
+	"github.com/trygo/ssss"
 )
 
 func RenderError(c *ssss.Controller, err interface{}) {
