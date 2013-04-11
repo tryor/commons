@@ -52,10 +52,9 @@ func (a loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
 
 func (a loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	if more {
-		idname := bytes.ToLower(fromServer)
-		if bytes.Equal([]byte("username:"), idname) {
+		if bytes.EqualFold([]byte("username:"), fromServer) {
 			return []byte(a.username), nil
-		} else if bytes.Equal([]byte("password:"), idname) {
+		} else if bytes.EqualFold([]byte("password:"), fromServer) {
 			return []byte(a.password), nil
 		}
 	}

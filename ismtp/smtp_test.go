@@ -23,6 +23,6 @@ func Test_ismtp(t *testing.T) {
 		[]byte(msg),
 	)
 	if err != nil {
-		fmt.Println(err)
+		t.Error(err)
 	}
 }

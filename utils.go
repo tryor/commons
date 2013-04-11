@@ -1,12 +1,14 @@
 package util
 
 import (
+	//"bytes"
 	"crypto/md5"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+	//"unicode"
 )
 
 func ParseUint(s string, def ...uint64) uint64 {
@@ -75,7 +77,23 @@ func GetLocalAddr() string {
 		if ip != "0.0.0.0" {
 			return ip
 		}
-
 	}
 	return ""
+}
+
+//不创建新数组切片，只在数组内部修改值
+func BytesToLower(bs []byte) {
+	for i := 0; i < len(bs); i++ {
+		if 'A' <= bs[i] && bs[i] <= 'Z' {
+			bs[i] += ('a' - 'A')
+		}
+	}
+}
+
+func BytesToUpper(bs []byte) {
+	for i := 0; i < len(bs); i++ {
+		if 'a' <= bs[i] && bs[i] <= 'z' {
+			bs[i] -= ('a' - 'A')
+		}
+	}
 }
