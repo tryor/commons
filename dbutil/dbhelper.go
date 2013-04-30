@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	//_ "github.com/Go-SQL-Driver/MySQL"
-	_ "github.com/ziutek/mymysql/godrv"
+	//_ "github.com/ziutek/mymysql/godrv"
 	"reflect"
 )
 
