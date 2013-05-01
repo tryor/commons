@@ -1,11 +1,17 @@
+/*
+Need to set the driver before using， 
+import (_ "github.com/Go-SQL-Driver/MySQL") 
+or
+import (_ "github.com/ziutek/mymysql/godrv") 
+and
+Driver and DSN
+*/
 package dbutil
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	//_ "github.com/Go-SQL-Driver/MySQL"
-	//_ "github.com/ziutek/mymysql/godrv"
 	"reflect"
 )
 
@@ -33,6 +39,7 @@ func CloseDB(db *sql.DB) {
 	}
 }
 
+//In a transaction block of executive function
 func Transaction(db *sql.DB, f func()) {
 
 	tx, err := db.Begin()
@@ -57,10 +64,12 @@ func Transaction(db *sql.DB, f func()) {
 	f()
 }
 
+//count records 
 func Count(db *sql.DB, table string, where string, params ...interface{}) int64 {
 	return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
 }
 
+//count records 
 func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
 	s, err := db.Prepare(sql)
 	if err != nil {
@@ -95,6 +104,7 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
 	return 0
 }
 
+//the structure properties of scanning into the map
 func ScanStructIntoMap(obj interface{}) (map[string]interface{}, error) {
 	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
 	if dataStruct.Kind() != reflect.Struct {
