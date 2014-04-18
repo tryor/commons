@@ -2,6 +2,7 @@ package ismtp
 
 import (
 	"fmt"
+	//"net/smtp"
 	"testing"
 )
 
@@ -11,6 +12,12 @@ func Test_ismtp(t *testing.T) {
 		"123qwe",
 		"smtp.126.com",
 	)
+
+	//auth := LoginAuth(
+	//	"applesabi@126.com",
+	//	"smtpceshi",
+	//	"smtp.126.com",
+	//)
 
 	ctype := fmt.Sprintf("Content-Type: %s; charset=%s", "text/html", "utf-8")
 	msg := fmt.Sprintf("To: %s\r\nCc: %s\r\nFrom: %s\r\nSubject: %s\r\n%s\r\n\r\n%s", "<TTT>trywen@qq.com", "", "TRY<trywen001@126.com>", "Hello", ctype, "<html><body>Hello Hello</body></html>")
@@ -23,6 +30,7 @@ func Test_ismtp(t *testing.T) {
 		[]byte(msg),
 	)
 	if err != nil {
+		fmt.Println(err)
 		t.Error(err)
 	}
 }

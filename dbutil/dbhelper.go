@@ -1,8 +1,8 @@
 /*
-Need to set the driver before using， 
-import (_ "github.com/Go-SQL-Driver/MySQL") 
+Need to set the driver before using，
+import (_ "github.com/Go-SQL-Driver/MySQL")
 or
-import (_ "github.com/ziutek/mymysql/godrv") 
+import (_ "github.com/ziutek/mymysql/godrv")
 and
 Driver and DSN
 */
@@ -13,6 +13,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 )
 
 var (
@@ -64,12 +66,12 @@ func Transaction(db *sql.DB, f func()) {
 	f()
 }
 
-//count records 
+//count records
 func Count(db *sql.DB, table string, where string, params ...interface{}) int64 {
 	return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
 }
 
-//count records 
+//count records
 func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
 	s, err := db.Prepare(sql)
 	if err != nil {
@@ -104,6 +106,120 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
 	return 0
 }
 
+func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interface{}) error {
+	//orm.ScanPK(rowsSlicePtr)
+	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
+	if sliceValue.Kind() != reflect.Slice {
+		return errors.New("needs a pointer to a slice")
+	}
+
+	sliceElementType := sliceValue.Type().Elem()
+	//st := reflect.New(sliceElementType)
+	//var keys []string
+	//results, err := ScanStructIntoMap(st.Interface())
+	//if err != nil {
+	//	return err
+	//}
+
+	//if orm.TableName == "" {
+	//	orm.TableName = getTableName(getTypeName(rowsSlicePtr))
+	//}
+	//for key, _ := range results {
+	//	keys = append(keys, key)
+	//}
+	//orm.ColumnStr = strings.Join(keys, ", ")
+
+	resultsSlice, err := FindMap(db, sql, params...)
+	if err != nil {
+		return err
+	}
+
+	for _, results := range resultsSlice {
+		newValue := reflect.New(sliceElementType)
+		err := ScanMapIntoStruct(newValue.Interface(), results)
+		if err != nil {
+			return err
+		}
+		sliceValue.Set(reflect.Append(sliceValue, reflect.Indirect(reflect.ValueOf(newValue.Interface()))))
+	}
+	return nil
+}
+
+func FindMap(db *sql.DB, sql string, params ...interface{}) (resultsSlice []map[string][]byte, err error) {
+	//defer orm.InitModel()
+
+	//fmt.Println("Prepare start")
+	//s, err := db.Prepare(sql)
+	//fmt.Println(s, " ", err)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//defer s.Close()
+	//fmt.Println("query start")
+	//res, err := s.Query(params...)
+	//fmt.Println("query end ", res, err)
+
+	fmt.Println("query start")
+	res, err := db.Query(sql, params...)
+	fmt.Println("query end ", res, err)
+
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+	fields, err := res.Columns()
+	if err != nil {
+		return nil, err
+	}
+	for res.Next() {
+		result := make(map[string][]byte)
+		var scanResultContainers []interface{}
+		for i := 0; i < len(fields); i++ {
+			var scanResultContainer interface{}
+			scanResultContainers = append(scanResultContainers, &scanResultContainer)
+		}
+		if err := res.Scan(scanResultContainers...); err != nil {
+			return nil, err
+		}
+		for ii, key := range fields {
+			rawValue := reflect.Indirect(reflect.ValueOf(scanResultContainers[ii]))
+			//if row is null then ignore
+			if rawValue.Interface() == nil {
+				continue
+			}
+			aa := reflect.TypeOf(rawValue.Interface())
+			vv := reflect.ValueOf(rawValue.Interface())
+			var str string
+			switch aa.Kind() {
+			case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				str = strconv.FormatInt(vv.Int(), 10)
+				result[key] = []byte(str)
+			case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				str = strconv.FormatUint(vv.Uint(), 10)
+				result[key] = []byte(str)
+			case reflect.Float32, reflect.Float64:
+				str = strconv.FormatFloat(vv.Float(), 'f', -1, 64)
+				result[key] = []byte(str)
+			case reflect.Slice:
+				if aa.Elem().Kind() == reflect.Uint8 {
+					result[key] = rawValue.Interface().([]byte)
+					break
+				}
+			case reflect.String:
+				str = vv.String()
+				result[key] = []byte(str)
+			//时间类型
+			case reflect.Struct:
+				str = rawValue.Interface().(time.Time).Format("2006-01-02 15:04:05.000 -0700")
+				result[key] = []byte(str)
+			}
+
+		}
+		resultsSlice = append(resultsSlice, result)
+	}
+	return resultsSlice, nil
+}
+
 //the structure properties of scanning into the map
 func ScanStructIntoMap(obj interface{}) (map[string]interface{}, error) {
 	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
@@ -126,6 +242,97 @@ func ScanStructIntoMap(obj interface{}) (map[string]interface{}, error) {
 	}
 
 	return mapped, nil
+}
+
+func titleCasedName(name string) string {
+	newstr := make([]rune, 0)
+	upNextChar := true
+
+	for _, chr := range name {
+		switch {
+		case upNextChar:
+			upNextChar = false
+			chr -= ('a' - 'A')
+		case chr == '_':
+			upNextChar = true
+			continue
+		}
+
+		newstr = append(newstr, chr)
+	}
+
+	return string(newstr)
+}
+
+func ScanMapIntoStruct(obj interface{}, objMap map[string][]byte) error {
+	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
+	if dataStruct.Kind() != reflect.Struct {
+		return errors.New("expected a pointer to a struct")
+	}
+
+	for key, data := range objMap {
+		structField := dataStruct.FieldByName(titleCasedName(key))
+		if !structField.CanSet() {
+			continue
+		}
+
+		var v interface{}
+
+		switch structField.Type().Kind() {
+		case reflect.Slice:
+			v = data
+		case reflect.String:
+			v = string(data)
+		case reflect.Bool:
+			v = string(data) == "1"
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+			x, err := strconv.Atoi(string(data))
+			if err != nil {
+				return errors.New("arg " + key + " as int: " + err.Error())
+			}
+			v = x
+		case reflect.Int64:
+			x, err := strconv.ParseInt(string(data), 10, 64)
+			if err != nil {
+				return errors.New("arg " + key + " as int: " + err.Error())
+			}
+			v = x
+		case reflect.Float32, reflect.Float64:
+			x, err := strconv.ParseFloat(string(data), 64)
+			if err != nil {
+				return errors.New("arg " + key + " as float64: " + err.Error())
+			}
+			v = x
+		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			x, err := strconv.ParseUint(string(data), 10, 64)
+			if err != nil {
+				return errors.New("arg " + key + " as int: " + err.Error())
+			}
+			v = x
+		//Now only support Time type
+		case reflect.Struct:
+			if structField.Type().String() != "time.Time" {
+				return errors.New("unsupported struct type in Scan: " + structField.Type().String())
+			}
+
+			x, err := time.Parse("2006-01-02 15:04:05", string(data))
+			if err != nil {
+				x, err = time.Parse("2006-01-02 15:04:05.000 -0700", string(data))
+
+				if err != nil {
+					return errors.New("unsupported time format: " + string(data))
+				}
+			}
+
+			v = x
+		default:
+			return errors.New("unsupported type in Scan: " + reflect.TypeOf(v).String())
+		}
+
+		structField.Set(reflect.ValueOf(v))
+	}
+
+	return nil
 }
 
 func snakeCasedName(name string) string {

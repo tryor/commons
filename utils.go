@@ -19,7 +19,7 @@ func ParseUint(s string, def ...uint64) uint64 {
 			return 0
 		}
 	}
-	v, err := strconv.ParseUint(s, 10, 0)
+	v, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +34,7 @@ func ParseInt(s string, def ...int64) int64 {
 			return 0
 		}
 	}
-	v, err := strconv.ParseInt(s, 10, 0)
+	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		panic(err)
 	}
