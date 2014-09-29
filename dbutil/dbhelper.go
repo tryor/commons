@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 	"time"
@@ -21,7 +22,7 @@ var (
 	Driver, DSN string
 )
 
-func OpenDB(param ...string) *sql.DB {
+func OpenDB(param ...string) (*sql.DB, error) {
 	var db *sql.DB
 	var err error
 	if len(param) >= 2 {
@@ -30,57 +31,72 @@ func OpenDB(param ...string) *sql.DB {
 		db, err = sql.Open(Driver, DSN)
 	}
 	if err != nil {
-		panic(err)
+		//panic(err)
+		return nil, err
 	}
-	return db
+	return db, nil
 }
 
-func CloseDB(db *sql.DB) {
+func CloseDB(db *sql.DB) error {
 	if db != nil {
-		db.Close()
+		return db.Close()
 	}
+	return nil
 }
 
 //In a transaction block of executive function
-func Transaction(db *sql.DB, f func()) {
+func Transaction(db *sql.DB, f func() error) error {
 
 	tx, err := db.Begin()
 	if err != nil {
-		panic(err)
+		//panic(err)
+		return err
 	}
 
+	//如果f()函数是通过panic抛出错误，那也将此错误使用panic抛出
 	defer func() {
 		if r := recover(); r != nil {
 			err := tx.Rollback()
 			if err != nil {
 				panic(err)
+				//return err
 			}
 			panic(r)
+			//return errors.New(fmt.Sprint(r))
 		} else {
 			err = tx.Commit()
 			if err != nil {
-				panic(err)
+				//panic(err)
+				//return err
+				log.Fatal(err)
 			}
 		}
 	}()
-	f()
+
+	err = f()
+	if err != nil {
+		return tx.Rollback()
+	}
+	return err
 }
 
 //count records
-func Count(db *sql.DB, table string, where string, params ...interface{}) int64 {
+func Count(db *sql.DB, table string, where string, params ...interface{}) (int64, error) {
 	return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
 }
 
 //count records
-func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
+func CountQuery(db *sql.DB, sql string, params ...interface{}) (int64, error) {
 	s, err := db.Prepare(sql)
 	if err != nil {
-		panic(err)
+		//panic(err)
+		return 0, err
 	}
 	defer s.Close()
 	res, err := s.Query(params...)
 	if err != nil {
-		panic(err)
+		//panic(err)
+		return 0, err
 	}
 	defer res.Close()
 
@@ -89,7 +105,8 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
 		var countResult interface{}
 		countResults = append(countResults, &countResult)
 		if err := res.Scan(countResults...); err != nil {
-			panic(err)
+			//panic(err)
+			return 0, err
 		}
 		rawValue := reflect.Indirect(reflect.ValueOf(countResult))
 		aa := reflect.TypeOf(rawValue.Interface())
@@ -101,9 +118,9 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) int64 {
 		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			countVal = int64(vv.Uint())
 		}
-		return countVal
+		return countVal, nil
 	}
-	return 0
+	return 0, nil
 }
 
 func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interface{}) error {
