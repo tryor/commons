@@ -97,3 +97,11 @@ func BytesToUpper(bs []byte) {
 		}
 	}
 }
+
+//func Insert(slice []interface{}, index int, insertion ...interface{}) []interface{} {
+//	result := make([]interface{}, len(slice)+len(insertion))
+//	at := copy(result, slice[:index])
+//	at += copy(result[at:], insertion)
+//	copy(result[at:], slice[index:])
+//	return result
+//}

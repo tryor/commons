@@ -108,6 +108,30 @@ func (c *Config) String(key string) string {
 	return c.data[key]
 }
 
+func (c *Config) GetInt(key string, def int) int {
+	if val, err := c.Int(key); err != nil {
+		return def
+	} else {
+		return val
+	}
+}
+
+func (c *Config) GetBool(key string, def bool) bool {
+	if val, err := c.Bool(key); err != nil {
+		return def
+	} else {
+		return val
+	}
+}
+
+func (c *Config) GetString(key string, def string) string {
+	val := c.String(key)
+	if val == "" {
+		return def
+	}
+	return val
+}
+
 // WriteValue writes a new value for key.
 func (c *Config) SetValue(key, value string) error {
 	c.Lock()
