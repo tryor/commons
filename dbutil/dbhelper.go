@@ -15,6 +15,7 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -82,7 +83,11 @@ func Transaction(db *sql.DB, f func() error) error {
 
 //count records
 func Count(db *sql.DB, table string, where string, params ...interface{}) (int64, error) {
-	return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
+	if strings.TrimSpace(where) != "" {
+		return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
+	} else {
+		return CountQuery(db, "select count(*) from "+table)
+	}
 }
 
 //count records
@@ -124,27 +129,12 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) (int64, error) {
 }
 
 func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interface{}) error {
-	//orm.ScanPK(rowsSlicePtr)
 	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
 	if sliceValue.Kind() != reflect.Slice {
 		return errors.New("needs a pointer to a slice")
 	}
 
 	sliceElementType := sliceValue.Type().Elem()
-	//st := reflect.New(sliceElementType)
-	//var keys []string
-	//results, err := ScanStructIntoMap(st.Interface())
-	//if err != nil {
-	//	return err
-	//}
-
-	//if orm.TableName == "" {
-	//	orm.TableName = getTableName(getTypeName(rowsSlicePtr))
-	//}
-	//for key, _ := range results {
-	//	keys = append(keys, key)
-	//}
-	//orm.ColumnStr = strings.Join(keys, ", ")
 
 	resultsSlice, err := FindMap(db, sql, params...)
 	if err != nil {
@@ -163,23 +153,8 @@ func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interfa
 }
 
 func FindMap(db *sql.DB, sql string, params ...interface{}) (resultsSlice []map[string][]byte, err error) {
-	//defer orm.InitModel()
 
-	//fmt.Println("Prepare start")
-	//s, err := db.Prepare(sql)
-	//fmt.Println(s, " ", err)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//defer s.Close()
-	//fmt.Println("query start")
-	//res, err := s.Query(params...)
-	//fmt.Println("query end ", res, err)
-
-	fmt.Println("query start")
 	res, err := db.Query(sql, params...)
-	fmt.Println("query end ", res, err)
-
 	if err != nil {
 		return nil, err
 	}
