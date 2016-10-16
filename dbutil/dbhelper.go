@@ -46,37 +46,33 @@ func CloseDB(db *sql.DB) error {
 }
 
 //In a transaction block of executive function
-func Transaction(db *sql.DB, f func() error) error {
+func Transaction(db *sql.DB, f func(tx *sql.Tx) error) (err error) {
 
-	tx, err := db.Begin()
+	var tx *sql.Tx
+	tx, err = db.Begin()
 	if err != nil {
-		//panic(err)
-		return err
+		return
 	}
 
 	//如果f()函数是通过panic抛出错误，那也将此错误使用panic抛出
 	defer func() {
 		if r := recover(); r != nil {
-			err := tx.Rollback()
+			err = tx.Rollback()
 			if err != nil {
 				panic(err)
-				//return err
 			}
 			panic(r)
-			//return errors.New(fmt.Sprint(r))
-		} else {
+		} else if err == nil {
 			err = tx.Commit()
-			if err != nil {
-				//panic(err)
-				//return err
-				log.Fatal(err)
-			}
 		}
 	}()
 
-	err = f()
+	err = f(tx)
 	if err != nil {
-		return tx.Rollback()
+		err1 := tx.Rollback()
+		if err1 != nil {
+			err = err1
+		}
 	}
 	return err
 }

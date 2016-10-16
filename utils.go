@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	//"bytes"
 	"crypto/md5"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"time"
 	//"unicode"
+	"bufio"
+	"io"
 )
 
 func ParseUint(s string, def ...uint64) uint64 {
@@ -105,3 +108,33 @@ func BytesToUpper(bs []byte) {
 //	copy(result[at:], slice[index:])
 //	return result
 //}
+
+//body_buf := new(bytes.Buffer)
+
+func ReadFull(r io.Reader) (*bytes.Buffer, error) {
+
+	if _, ok := r.(*bufio.Reader); !ok {
+		r = bufio.NewReader(r)
+	}
+
+	buffer := new(bytes.Buffer)
+
+	bufsize := 1024
+	buf := make([]byte, bufsize)
+
+	for {
+		//		n, err := io.ReadFull(r, buf)
+		n, err := r.Read(buf)
+		if n > 0 {
+			buffer.Write(buf[0:n])
+		}
+		//		fmt.Println("n:", n)
+		if err != nil {
+			if err != io.EOF && err != io.ErrUnexpectedEOF {
+				return buffer, err
+			}
+			break
+		}
+	}
+	return buffer, nil
+}

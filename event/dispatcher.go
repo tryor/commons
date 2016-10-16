@@ -28,7 +28,7 @@ func NewDispatcher() *Dispatcher {
 func InitDispatcher(d *Dispatcher) {
 	//d.allAsynEvents = make([]*Event, 0)
 	//d.allEventListeners = make([]IListener, 0)
-	d.AllTypeListeners = make(map[Type][]IListener, 0)
+	d.AllTypeListeners = make(map[Type][]IListener)
 }
 
 //注册事件监听器, t为事件类型, 此监听器将监听类型为t的事件。 pos为监听器顺序位置
