@@ -1,4 +1,4 @@
-package ecutil
+package codingutil
 
 import (
 	"crypto/md5"
