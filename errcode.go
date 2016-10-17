@@ -12,6 +12,7 @@ const ERROR_CODE_DATABASE_QUERY_FAILED int = 1101   //数据查询失败
 var ERROR_INFO_MAP map[int]string
 
 func init() {
+	ERROR_INFO_MAP = make(map[int]string)
 	ERROR_INFO_MAP[ERROR_CODE_RUNTIME] = "运行时异常"
 	ERROR_INFO_MAP[ERROR_CODE_PARAM_IS_EMPTY] = "参数为空"
 	ERROR_INFO_MAP[ERROR_CODE_OBJECT_NOT_EXIST] = "对象不存在"
