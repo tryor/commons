@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -171,4 +172,51 @@ func ReadAll(r io.Reader) (*bytes.Buffer, error) {
 	}
 
 	return data, nil
+}
+
+func GetRemoteIp(req *http.Request) (ip string, port string) {
+	h := req.Header
+
+	ip = h.Get("X-Forwarded-For")
+	if len(ip) == 0 || strings.EqualFold("unknown", ip) {
+		ip = h.Get("X-Real-IP")
+	}
+	if len(ip) == 0 || strings.EqualFold("unknown", ip) {
+		ip = h.Get("Proxy-Client-IP")
+	}
+	if len(ip) == 0 || strings.EqualFold("unknown", ip) {
+		ip = h.Get("WL-Proxy-Client-IP")
+	}
+	if len(ip) == 0 || strings.EqualFold("unknown", ip) {
+		ip = h.Get("HTTP_CLIENT_IP")
+	}
+	if len(ip) == 0 || strings.EqualFold("unknown", ip) {
+		ip = h.Get("HTTP_X_FORWARDED_FOR")
+	}
+	if len(ip) == 0 || strings.EqualFold("unknown", ip) {
+		ip = req.RemoteAddr
+	}
+
+	ips := strings.Split(ip, ",")
+	if len(ips) == 0 {
+		//ip = ip
+	} else if len(ips) == 1 {
+		ip = ips[0]
+	} else {
+		for _, v := range ips {
+			if len(v) == 0 || strings.EqualFold("unknown", v) {
+				continue
+			}
+			ip = v
+		}
+	}
+
+	if ip != "" {
+		ips_ := strings.Split(ip, ":")
+		ip = ips_[0]
+		if len(ips_) > 1 {
+			port = ips_[1]
+		}
+	}
+	return
 }
