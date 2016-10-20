@@ -92,14 +92,14 @@ func (c *Cache) get(key string) interface{} {
 	return nil
 }
 
-func (c *Cache) GetIfPresent(key string) interface{} {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+//func (c *Cache) GetIfPresent(key string) interface{} {
+//	c.lock.Lock()
+//	defer c.lock.Unlock()
 
-	return c.get(key)
-}
+//	return c.get(key)
+//}
 
-func (c *Cache) Get(key string, setter func() interface{}) interface{} {
+func (c *Cache) Get(key string, setter ...func() interface{}) interface{} {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -107,9 +107,11 @@ func (c *Cache) Get(key string, setter func() interface{}) interface{} {
 	if v != nil {
 		return v
 	}
-	v = setter()
-	if v != nil {
-		c.put(key, v)
+	if len(setter) > 0 {
+		v = setter[0]()
+		if v != nil {
+			c.put(key, v)
+		}
 	}
 	return v
 }
