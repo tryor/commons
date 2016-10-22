@@ -1,11 +1,12 @@
-package util
+package taskutil
 
 import (
-	log "github.com/cihub/seelog"
 	"math/rand"
 	"runtime"
 	"sync"
 	"sync/atomic"
+
+	log "github.com/cihub/seelog"
 )
 
 type TaskPoolExecutor struct {
@@ -25,6 +26,12 @@ type runable struct {
 }
 
 func NewTaskPoolExecutor(engineNums int, taskQueueSize int, randomExecuteTaskMode ...bool) *TaskPoolExecutor {
+	if engineNums <= 0 {
+		engineNums = runtime.NumCPU() / 2
+		if engineNums < 3 {
+			engineNums = 3
+		}
+	}
 	exetor := &TaskPoolExecutor{running: 0, engineNums: engineNums, taskQueueSize: taskQueueSize}
 	exetor.runablechs = make([]chan *runable, engineNums)
 	exetor.lock = new(sync.Mutex)
