@@ -1,5 +1,5 @@
 //Code from(github.com/astaxie/beego/config.go)
-package util
+package configutil
 
 import (
 	"bufio"
