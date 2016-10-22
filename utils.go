@@ -1,17 +1,15 @@
 package util
 
 import (
+	"bufio"
 	"bytes"
-	//"bytes"
 	"crypto/md5"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"strings"
 	"time"
-	//"unicode"
-	"bufio"
-	"io"
 )
 
 func ParseUint(s string, def ...uint64) uint64 {

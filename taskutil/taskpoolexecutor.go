@@ -6,7 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	log "github.com/cihub/seelog"
+	log "github.com/alecthomas/log4go"
 )
 
 type TaskPoolExecutor struct {
@@ -18,6 +18,7 @@ type TaskPoolExecutor struct {
 	randomExecuteTaskMode bool
 	engineIdx             int
 	lock                  *sync.Mutex
+	PrintPanic            bool
 }
 
 type runable struct {
@@ -32,7 +33,7 @@ func NewTaskPoolExecutor(engineNums int, taskQueueSize int, randomExecuteTaskMod
 			engineNums = 3
 		}
 	}
-	exetor := &TaskPoolExecutor{running: 0, engineNums: engineNums, taskQueueSize: taskQueueSize}
+	exetor := &TaskPoolExecutor{running: 0, engineNums: engineNums, taskQueueSize: taskQueueSize, PrintPanic: true}
 	exetor.runablechs = make([]chan *runable, engineNums)
 	exetor.lock = new(sync.Mutex)
 	if len(randomExecuteTaskMode) > 0 {
@@ -112,13 +113,15 @@ func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 func (this *TaskPoolExecutor) executeTask(runable *runable) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("executeTask Runtime error caught: %v", r)
-			for i := 1; ; i += 1 {
-				_, file, line, ok := runtime.Caller(i)
-				if !ok {
-					break
+			log.Error("executeTask Runtime error caught: %v", r)
+			if this.PrintPanic {
+				for i := 1; ; i += 1 {
+					_, file, line, ok := runtime.Caller(i)
+					if !ok {
+						break
+					}
+					log.Info("%v %v", file, line)
 				}
-				log.Info(file, line)
 			}
 		}
 	}()
