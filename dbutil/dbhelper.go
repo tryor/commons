@@ -140,7 +140,8 @@ func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interfa
 
 	for _, results := range resultsSlice {
 		newValue := reflect.New(sliceElementType)
-		err := beedb.ScanMapIntoStruct(newValue.Interface(), results)
+		//err := beedb.ScanMapIntoStruct(newValue.Interface(), results)
+		err := ScanMapIntoStruct(newValue.Interface(), results)
 		if err != nil {
 			return err
 		}
@@ -238,96 +239,96 @@ func FindMap(db *sql.DB, sql string, params ...interface{}) (resultsSlice []map[
 //	return mapped, nil
 //}
 
-//func titleCasedName(name string) string {
-//	newstr := make([]rune, 0)
-//	upNextChar := true
+func titleCasedName(name string) string {
+	newstr := make([]rune, 0)
+	upNextChar := true
 
-//	for _, chr := range name {
-//		switch {
-//		case upNextChar:
-//			upNextChar = false
-//			chr -= ('a' - 'A')
-//		case chr == '_':
-//			upNextChar = true
-//			continue
-//		}
+	for _, chr := range name {
+		switch {
+		case upNextChar:
+			upNextChar = false
+			chr -= ('a' - 'A')
+		case chr == '_':
+			upNextChar = true
+			continue
+		}
 
-//		newstr = append(newstr, chr)
-//	}
+		newstr = append(newstr, chr)
+	}
 
-//	return string(newstr)
-//}
+	return string(newstr)
+}
 
-//func ScanMapIntoStruct(obj interface{}, objMap map[string][]byte) error {
-//	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
-//	if dataStruct.Kind() != reflect.Struct {
-//		return errors.New("expected a pointer to a struct")
-//	}
+func ScanMapIntoStruct(obj interface{}, objMap map[string][]byte) error {
+	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
+	if dataStruct.Kind() != reflect.Struct {
+		return errors.New("expected a pointer to a struct")
+	}
 
-//	for key, data := range objMap {
-//		structField := dataStruct.FieldByName(titleCasedName(key))
-//		if !structField.CanSet() {
-//			continue
-//		}
+	for key, data := range objMap {
+		structField := dataStruct.FieldByName(titleCasedName(key))
+		if !structField.CanSet() {
+			continue
+		}
 
-//		var v interface{}
+		var v interface{}
 
-//		switch structField.Type().Kind() {
-//		case reflect.Slice:
-//			v = data
-//		case reflect.String:
-//			v = string(data)
-//		case reflect.Bool:
-//			v = string(data) == "1"
-//		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
-//			x, err := strconv.Atoi(string(data))
-//			if err != nil {
-//				return errors.New("arg " + key + " as int: " + err.Error())
-//			}
-//			v = x
-//		case reflect.Int64:
-//			x, err := strconv.ParseInt(string(data), 10, 64)
-//			if err != nil {
-//				return errors.New("arg " + key + " as int: " + err.Error())
-//			}
-//			v = x
-//		case reflect.Float32, reflect.Float64:
-//			x, err := strconv.ParseFloat(string(data), 64)
-//			if err != nil {
-//				return errors.New("arg " + key + " as float64: " + err.Error())
-//			}
-//			v = x
-//		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-//			x, err := strconv.ParseUint(string(data), 10, 64)
-//			if err != nil {
-//				return errors.New("arg " + key + " as int: " + err.Error())
-//			}
-//			v = x
-//		//Now only support Time type
-//		case reflect.Struct:
-//			if structField.Type().String() != "time.Time" {
-//				return errors.New("unsupported struct type in Scan: " + structField.Type().String())
-//			}
+		switch structField.Type().Kind() {
+		case reflect.Slice:
+			v = data
+		case reflect.String:
+			v = string(data)
+		case reflect.Bool:
+			v = string(data) == "1"
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+			x, err := strconv.Atoi(string(data))
+			if err != nil {
+				return errors.New("arg " + key + " as int: " + err.Error())
+			}
+			v = x
+		case reflect.Int64:
+			x, err := strconv.ParseInt(string(data), 10, 64)
+			if err != nil {
+				return errors.New("arg " + key + " as int: " + err.Error())
+			}
+			v = x
+		case reflect.Float32, reflect.Float64:
+			x, err := strconv.ParseFloat(string(data), 64)
+			if err != nil {
+				return errors.New("arg " + key + " as float64: " + err.Error())
+			}
+			v = x
+		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			x, err := strconv.ParseUint(string(data), 10, 64)
+			if err != nil {
+				return errors.New("arg " + key + " as int: " + err.Error())
+			}
+			v = x
+		//Now only support Time type
+		case reflect.Struct:
+			if structField.Type().String() != "time.Time" {
+				return errors.New("unsupported struct type in Scan: " + structField.Type().String())
+			}
 
-//			x, err := time.Parse("2006-01-02 15:04:05", string(data))
-//			if err != nil {
-//				x, err = time.Parse("2006-01-02 15:04:05.000 -0700", string(data))
+			x, err := time.Parse("2006-01-02 15:04:05", string(data))
+			if err != nil {
+				x, err = time.Parse("2006-01-02 15:04:05.000 -0700", string(data))
 
-//				if err != nil {
-//					return errors.New("unsupported time format: " + string(data))
-//				}
-//			}
+				if err != nil {
+					return errors.New("unsupported time format: " + string(data))
+				}
+			}
 
-//			v = x
-//		default:
-//			return errors.New("unsupported type in Scan: " + reflect.TypeOf(v).String())
-//		}
+			v = x
+		default:
+			return errors.New("unsupported type in Scan: " + reflect.TypeOf(v).String())
+		}
 
-//		structField.Set(reflect.ValueOf(v))
-//	}
+		structField.Set(reflect.ValueOf(v))
+	}
 
-//	return nil
-//}
+	return nil
+}
 
 //func snakeCasedName(name string) string {
 //	newstr := make([]rune, 0)
