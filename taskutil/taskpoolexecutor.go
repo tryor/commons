@@ -1,24 +1,19 @@
 package taskutil
 
 import (
-	"math/rand"
 	"runtime"
-	"sync"
 	"sync/atomic"
 
 	log "github.com/alecthomas/log4go"
 )
 
 type TaskPoolExecutor struct {
-	runablechs            []chan *runable
-	running               int32 //0(false) or 1(true)
-	engineNums            int
-	activeTaskNums        int32
-	taskQueueSize         int
-	randomExecuteTaskMode bool
-	engineIdx             int
-	lock                  *sync.Mutex
-	PrintPanic            bool
+	queueChan     chan *runable
+	running       int32 //0(false) or 1(true)
+	engines       int
+	activeCount   int32
+	taskQueueSize int
+	PrintPanic    bool
 }
 
 type runable struct {
@@ -26,32 +21,24 @@ type runable struct {
 	ps []interface{}          //参数
 }
 
-func NewTaskPoolExecutor(engineNums int, taskQueueSize int, randomExecuteTaskMode ...bool) *TaskPoolExecutor {
-	if engineNums <= 0 {
-		engineNums = runtime.NumCPU() / 2
-		if engineNums < 3 {
-			engineNums = 3
+func NewTaskPoolExecutor(engines int, taskQueueSize int) *TaskPoolExecutor {
+	if engines <= 0 {
+		engines = runtime.NumCPU() / 2
+		if engines < 3 {
+			engines = 3
 		}
 	}
-	exetor := &TaskPoolExecutor{running: 0, engineNums: engineNums, taskQueueSize: taskQueueSize, PrintPanic: true}
-	exetor.runablechs = make([]chan *runable, engineNums)
-	exetor.lock = new(sync.Mutex)
-	if len(randomExecuteTaskMode) > 0 {
-		exetor.randomExecuteTaskMode = randomExecuteTaskMode[0]
-	}
+
+	exetor := &TaskPoolExecutor{running: 0, engines: engines, taskQueueSize: taskQueueSize, PrintPanic: true}
 	return exetor
 }
 
-func (this *TaskPoolExecutor) GetActiveTaskNums() int32 {
-	return atomic.LoadInt32(&this.activeTaskNums)
+func (this *TaskPoolExecutor) GetQueueSize() int {
+	return len(this.queueChan)
 }
 
-func (this *TaskPoolExecutor) incActiveTaskNums() {
-	atomic.AddInt32(&this.activeTaskNums, 1)
-}
-
-func (this *TaskPoolExecutor) decActiveTaskNums() {
-	atomic.AddInt32(&this.activeTaskNums, -1)
+func (this *TaskPoolExecutor) GetActiveCount() int {
+	return int(atomic.LoadInt32(&this.activeCount))
 }
 
 func (this *TaskPoolExecutor) Start() {
@@ -59,9 +46,9 @@ func (this *TaskPoolExecutor) Start() {
 		return
 	}
 	this.running = 1
-	for i := 0; i < this.engineNums; i++ {
-		this.runablechs[i] = make(chan *runable, this.taskQueueSize)
-		go this.startEngine(this.runablechs[i])
+	this.queueChan = make(chan *runable, this.taskQueueSize)
+	for i := 0; i < this.engines; i++ {
+		go this.startEngine(this.queueChan)
 	}
 }
 
@@ -78,42 +65,29 @@ func (this *TaskPoolExecutor) Execute(f func(p ...interface{}), p ...interface{}
 	if !this.isRunning() {
 		panic("task pool executor not is running!")
 	}
-	this.incActiveTaskNums()
-	this.lock.Lock()
-	defer this.lock.Unlock()
-
-	if this.randomExecuteTaskMode {
-		this.runablechs[rand.Int()%this.engineNums] <- &runable{f: f, ps: p}
-	} else {
-		if this.engineIdx >= this.engineNums {
-			this.engineIdx = 0
-		}
-		this.runablechs[this.engineIdx] <- &runable{f: f, ps: p}
-		this.engineIdx++
-	}
+	this.queueChan <- &runable{f: f, ps: p}
 }
 
 func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 	for !(!this.isRunning() && len(runablech) == 0) {
-		//log.Infof("len(runablech):%v, this.isRunning():%v", len(runablech), this.isRunning())
 		r, ok := <-runablech
 		if ok {
+			atomic.AddInt32(&this.activeCount, 1)
 			this.executeTask(r)
-			this.decActiveTaskNums()
+			atomic.AddInt32(&this.activeCount, -1)
 		} else {
 			log.Warn("runable chan is closed!")
-			this.decActiveTaskNums()
 			return
 		}
 	}
+	//fmt.Printf("this.isRunning():%v, len(runablech):%v\n", this.isRunning(), len(runablech))
 	close(runablech)
-	//log.Info("exit engine")
 }
 
 func (this *TaskPoolExecutor) executeTask(runable *runable) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("executeTask Runtime error caught: %v", r)
+			log.Error("execute task runtime error caught: %v", r)
 			if this.PrintPanic {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)

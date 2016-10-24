@@ -29,6 +29,10 @@ type Condition struct {
 	conditions []*term
 }
 
+func NewCondition() *Condition {
+	return &Condition{conditions: make([]*term, 0, 10)}
+}
+
 type term struct {
 	logicOperator string
 	condiItem     *ConditionItem
