@@ -94,7 +94,7 @@ func (this *TaskPoolExecutor) executeTask(runable *runable) {
 					if !ok {
 						break
 					}
-					log.Info("%v %v", file, line)
+					log.Error("%v(%v)", file, line)
 				}
 			}
 		}
