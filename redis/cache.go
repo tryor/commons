@@ -3,9 +3,12 @@ package redis
 
 import (
 	"encoding/json"
-	"github.com/garyburd/redigo/redis"
+	//	"fmt"
+	//	"strconv"
 	"strings"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 var pool *redis.Pool
@@ -38,15 +41,6 @@ func GetRedis() redis.Conn {
 	return pool.Get()
 }
 
-type HashMap struct {
-	Name string
-}
-
-func NewHashMap(name string) *HashMap {
-	Do("PING")
-	return &HashMap{name}
-}
-
 func Send(cmd string, args ...interface{}) error {
 	red := GetRedis()
 	defer red.Close()
@@ -63,6 +57,47 @@ func Do(cmd string, args ...interface{}) (interface{}, error) {
 	defer red.Close()
 	//log.Debugf("Do %v %v", cmd, args)
 	return red.Do(cmd, args...)
+}
+
+func SetString(k string, v string, expire ...int) error {
+	//SET key value [EX seconds]
+	if len(expire) > 0 {
+		return Send("SET", k, v, "EX", expire[0]) //return Send("SET", k, v, "EX "+strconv.Itoa(expire[0]))
+	} else {
+		return Send("SET", k, v)
+	}
+}
+
+func GetString(k string) (string, error) {
+	str, err := redis.String(Do("GET", k))
+	if err == nil {
+		str = strings.Trim(str, "\"")
+	}
+	return str, err
+}
+
+func SetObject(k string, v interface{}, expire ...int) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	if len(expire) > 0 {
+		return Send("SET", k, b, "EX", expire[0])
+	} else {
+		return Send("SET", k, b)
+	}
+}
+
+func GetObject(k string, clazz interface{}) error {
+	b, err := redis.Bytes(Do("GET", k))
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, clazz)
+}
+
+func Del(k string) error {
+	return Send("DEL", k)
 }
 
 func titleCasedName(name string) string {
@@ -84,11 +119,25 @@ func titleCasedName(name string) string {
 
 	return string(newstr)
 }
+
+type HashMap struct {
+	Name string
+}
+
+func NewHashMap(name string, expire ...int) *HashMap {
+	Do("PING")
+	hmap := &HashMap{name}
+	if len(expire) > 0 {
+		hmap.SetExpire(expire[0])
+	}
+	return hmap
+}
+
 func (this *HashMap) SetExpire(second int) error {
 	return Send("EXPIRE", this.Name, second)
 }
 
-func (this *HashMap) PutObject(k string, v interface{}) error {
+func (this *HashMap) SetObject(k string, v interface{}) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -150,7 +199,7 @@ func (this *HashMap) GetObject(k string, clazz interface{}) error {
 //	return err
 //}
 
-func (this *HashMap) PutString(k string, v string) error {
+func (this *HashMap) SetString(k string, v string) error {
 	return Send("HSET", this.Name, k, v)
 }
 
@@ -188,7 +237,7 @@ func (this *HashMap) Size() (int, error) {
 	return redis.Int(Do("HLEN", this.Name))
 }
 
-func (this *HashMap) Remove(k string) error {
+func (this *HashMap) Del(k string) error {
 	return Send("HDEL", this.Name, k)
 }
 

@@ -11,7 +11,7 @@ type Cache struct {
 	ll         *list.List
 	cache      map[string]*list.Element
 	duration   time.Duration
-	lock       sync.Mutex
+	lock       sync.RWMutex
 }
 
 type entry struct {
@@ -20,6 +20,7 @@ type entry struct {
 	timeout time.Time
 }
 
+//duration 为默认超时时间
 func New(maxEntries int, duration time.Duration) *Cache {
 	var c = &Cache{
 		maxEntries: maxEntries,
@@ -59,21 +60,31 @@ func (c *Cache) check() time.Duration {
 	}
 }
 
-func (c *Cache) Put(key string, value interface{}) {
+func (c *Cache) Put(key string, value interface{}, expire ...time.Duration) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.put(key, value)
 }
 
-func (c *Cache) put(key string, value interface{}) {
+func (c *Cache) put(key string, value interface{}, expire ...time.Duration) {
+
+	timeout := func() time.Time {
+		if len(expire) > 0 {
+			return time.Now().Add(expire[0])
+		} else {
+			return time.Now().Add(c.duration)
+		}
+	}
+
 	if ee, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ee)
 		var v = ee.Value.(*entry)
 		v.value = value
-		v.timeout = time.Now().Add(c.duration)
+		v.timeout = timeout() //time.Now().Add(c.duration)
 		return
 	}
-	var ele = c.ll.PushFront(&entry{key, value, time.Now().Add(c.duration)})
+	//var ele = c.ll.PushFront(&entry{key, value, time.Now().Add(c.duration)})
+	var ele = c.ll.PushFront(&entry{key, value, timeout()})
 	c.cache[key] = ele
 
 	if c.maxEntries == 0 {
@@ -114,6 +125,13 @@ func (c *Cache) Get(key string, setter ...func() interface{}) interface{} {
 		}
 	}
 	return v
+}
+
+func (c *Cache) Exists(key string) bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	_, ok := c.cache[key]
+	return ok
 }
 
 func (c *Cache) Remove(key string) {

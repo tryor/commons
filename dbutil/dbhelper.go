@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -89,15 +90,19 @@ func Count(db *sql.DB, table string, where string, params ...interface{}) (int64
 
 //count records
 func CountQuery(db *sql.DB, sql string, params ...interface{}) (int64, error) {
+
+	if beedb.OnDebug {
+		log.Println(sql)
+		log.Println(params)
+	}
+
 	s, err := db.Prepare(sql)
 	if err != nil {
-		//panic(err)
 		return 0, err
 	}
 	defer s.Close()
 	res, err := s.Query(params...)
 	if err != nil {
-		//panic(err)
 		return 0, err
 	}
 	defer res.Close()
@@ -107,7 +112,6 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) (int64, error) {
 		var countResult interface{}
 		countResults = append(countResults, &countResult)
 		if err := res.Scan(countResults...); err != nil {
-			//panic(err)
 			return 0, err
 		}
 		rawValue := reflect.Indirect(reflect.ValueOf(countResult))
@@ -153,8 +157,8 @@ func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interfa
 func FindMap(db *sql.DB, sql string, params ...interface{}) (resultsSlice []map[string][]byte, err error) {
 
 	if beedb.OnDebug {
-		fmt.Println(sql)
-		fmt.Println(params)
+		log.Println(sql)
+		log.Println(params)
 	}
 
 	res, err := db.Query(sql, params...)
