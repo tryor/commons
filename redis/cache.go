@@ -100,6 +100,14 @@ func Del(k string) error {
 	return Send("DEL", k)
 }
 
+func TTL(k string) (int, error) {
+	b, err := redis.Int(Do("TTL", k))
+	if err != nil {
+		return b, err
+	}
+	return b, nil
+}
+
 func titleCasedName(name string) string {
 	newstr := make([]rune, 0)
 	upNextChar := true
@@ -124,13 +132,9 @@ type HashMap struct {
 	Name string
 }
 
-func NewHashMap(name string, expire ...int) *HashMap {
+func NewHashMap(name string) *HashMap {
 	Do("PING")
-	hmap := &HashMap{name}
-	if len(expire) > 0 {
-		hmap.SetExpire(expire[0])
-	}
-	return hmap
+	return &HashMap{name}
 }
 
 func (this *HashMap) SetExpire(second int) error {

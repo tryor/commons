@@ -20,7 +20,6 @@ type entry struct {
 	timeout time.Time
 }
 
-//duration 为默认超时时间
 func New(maxEntries int, duration time.Duration) *Cache {
 	var c = &Cache{
 		maxEntries: maxEntries,
@@ -95,8 +94,12 @@ func (c *Cache) put(key string, value interface{}, expire ...time.Duration) {
 	}
 }
 
+func (c *Cache) isExpire(ele *list.Element) bool {
+	return time.Now().After(ele.Value.(*entry).timeout)
+}
+
 func (c *Cache) get(key string) interface{} {
-	if ele, hit := c.cache[key]; hit {
+	if ele, hit := c.cache[key]; hit && !c.isExpire(ele) {
 		c.ll.MoveToFront(ele)
 		return ele.Value.(*entry).value
 	}
@@ -110,6 +113,13 @@ func (c *Cache) get(key string) interface{} {
 //	return c.get(key)
 //}
 
+func (c *Cache) Exists(key string) bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	_, ok := c.cache[key]
+	return ok
+}
+
 func (c *Cache) Get(key string, setter ...func() interface{}) interface{} {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -118,6 +128,7 @@ func (c *Cache) Get(key string, setter ...func() interface{}) interface{} {
 	if v != nil {
 		return v
 	}
+
 	if len(setter) > 0 {
 		v = setter[0]()
 		if v != nil {
@@ -125,13 +136,6 @@ func (c *Cache) Get(key string, setter ...func() interface{}) interface{} {
 		}
 	}
 	return v
-}
-
-func (c *Cache) Exists(key string) bool {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	_, ok := c.cache[key]
-	return ok
 }
 
 func (c *Cache) Remove(key string) {
