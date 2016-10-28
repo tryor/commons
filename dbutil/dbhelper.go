@@ -220,28 +220,28 @@ func FindMap(db *sql.DB, sql string, params ...interface{}) (resultsSlice []map[
 }
 
 //the structure properties of scanning into the map
-//func ScanStructIntoMap(obj interface{}) (map[string]interface{}, error) {
-//	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
-//	if dataStruct.Kind() != reflect.Struct {
-//		return nil, errors.New("expected a pointer to a struct")
-//	}
+func ScanStructIntoMap(obj interface{}) (map[string]interface{}, error) {
+	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
+	if dataStruct.Kind() != reflect.Struct {
+		return nil, errors.New("expected a pointer to a struct")
+	}
 
-//	dataStructType := dataStruct.Type()
+	dataStructType := dataStruct.Type()
 
-//	mapped := make(map[string]interface{})
+	mapped := make(map[string]interface{})
 
-//	for i := 0; i < dataStructType.NumField(); i++ {
-//		field := dataStructType.Field(i)
-//		fieldName := field.Name
+	for i := 0; i < dataStructType.NumField(); i++ {
+		field := dataStructType.Field(i)
+		fieldName := field.Name
 
-//		mapKey := snakeCasedName(fieldName)
-//		value := dataStruct.FieldByName(fieldName).Interface()
+		mapKey := snakeCasedName(fieldName)
+		value := dataStruct.FieldByName(fieldName).Interface()
 
-//		mapped[mapKey] = value
-//	}
+		mapped[mapKey] = value
+	}
 
-//	return mapped, nil
-//}
+	return mapped, nil
+}
 
 func titleCasedName(name string) string {
 	newstr := make([]rune, 0)
@@ -334,24 +334,24 @@ func ScanMapIntoStruct(obj interface{}, objMap map[string][]byte) error {
 	return nil
 }
 
-//func snakeCasedName(name string) string {
-//	newstr := make([]rune, 0)
-//	firstTime := true
+func snakeCasedName(name string) string {
+	newstr := make([]rune, 0)
+	firstTime := true
 
-//	for _, chr := range name {
-//		if isUpper := 'A' <= chr && chr <= 'Z'; isUpper {
-//			if firstTime == true {
-//				firstTime = false
-//			} else {
-//				newstr = append(newstr, '_')
-//			}
-//			chr -= ('A' - 'a')
-//		}
-//		newstr = append(newstr, chr)
-//	}
+	for _, chr := range name {
+		if isUpper := 'A' <= chr && chr <= 'Z'; isUpper {
+			if firstTime == true {
+				firstTime = false
+			} else {
+				newstr = append(newstr, '_')
+			}
+			chr -= ('A' - 'a')
+		}
+		newstr = append(newstr, chr)
+	}
 
-//	return string(newstr)
-//}
+	return string(newstr)
+}
 
 func IsNoRecord(err error) bool {
 	return err != nil && "No record found" == err.Error()
