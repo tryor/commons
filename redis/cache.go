@@ -3,30 +3,36 @@ package redis
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
-
-	"github.com/trygo/util/cache"
 
 	"github.com/garyburd/redigo/redis"
 )
 
 var pool *redis.Pool
-var connPingMap *cache.Cache
 
-func init() {
-	connPingMap = cache.New(10000, time.Second*120)
-}
-
-func CacheInit(server, password string, maxIdle ...int) {
-	maxIdleNum := 10
-	if len(maxIdle) > 0 {
-		maxIdleNum = len(maxIdle)
+//server redis服务器，如:127.0.0.1:6726
+//password 服务密码
+//args[0] MaxIdleConns， 最大允许空闲连接数，也相当于池大小
+//args[1] 空闲连接超时时间， 秒
+//args[2] 连接TestOnBorrow测试时，指定空闲多少时间后的连接进行ping操作， 秒
+func CacheInit(server, password string, args ...int) {
+	maxIdleConns := 10
+	idleTimeout := 600 * time.Second
+	idlePing := 60 * time.Second
+	if len(args) > 0 {
+		maxIdleConns = args[0]
 	}
+	if len(args) > 1 {
+		idleTimeout = time.Duration(args[1]) * time.Second
+	}
+	if len(args) > 2 {
+		idlePing = time.Duration(args[2]) * time.Second
+	}
+
 	pool = &redis.Pool{
-		MaxIdle:     maxIdleNum,
-		IdleTimeout: 240 * time.Second,
+		MaxIdle:     maxIdleConns,
+		IdleTimeout: idleTimeout,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
 			if err != nil {
@@ -41,16 +47,10 @@ func CacheInit(server, password string, maxIdle ...int) {
 			return c, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			key := fmt.Sprintf("%p", c)
-			if connPingMap.Exists(key) {
-				//fmt.Printf("key:%v, connPingMap.len():%v\n", key, connPingMap.Len())
+			if time.Now().Sub(t) < idlePing {
 				return nil
 			}
 			_, err := c.Do("PING")
-			//fmt.Printf("err:%v, %p, connPingMap.len():%v\n", err, c, connPingMap.Len())
-			if err == nil {
-				connPingMap.Put(key, key)
-			}
 			return err
 		},
 	}
