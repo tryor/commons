@@ -3,19 +3,28 @@ package redis
 
 import (
 	"encoding/json"
-	//	"fmt"
-	//	"strconv"
+	"fmt"
 	"strings"
 	"time"
+	"trygo/util/cache"
 
 	"github.com/garyburd/redigo/redis"
 )
 
 var pool *redis.Pool
+var connPingMap *cache.Cache
 
-func CacheInit(server, password string) {
+func init() {
+	connPingMap = cache.New(10000, time.Second*120)
+}
+
+func CacheInit(server, password string, maxIdle ...int) {
+	maxIdleNum := 10
+	if len(maxIdle) > 0 {
+		maxIdleNum = len(maxIdle)
+	}
 	pool = &redis.Pool{
-		MaxIdle:     3,
+		MaxIdle:     maxIdleNum,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
@@ -31,7 +40,16 @@ func CacheInit(server, password string) {
 			return c, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			key := fmt.Sprintf("%p", c)
+			if connPingMap.Exists(key) {
+				//fmt.Printf("key:%v, connPingMap.len():%v\n", key, connPingMap.Len())
+				return nil
+			}
 			_, err := c.Do("PING")
+			//fmt.Printf("err:%v, %p, connPingMap.len():%v\n", err, c, connPingMap.Len())
+			if err == nil {
+				connPingMap.Put(key, key)
+			}
 			return err
 		},
 	}
