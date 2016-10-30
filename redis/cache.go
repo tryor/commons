@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/alecthomas/log4go"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -51,7 +52,11 @@ func CacheInit(server, password string, args ...int) {
 				return nil
 			}
 			_, err := c.Do("PING")
-			return err
+			if err != nil {
+				log.Warn("ping error, %v", err)
+				return err
+			}
+			return nil
 		},
 	}
 }
