@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"trygo/util/cache"
+
+	"github.com/trygo/util/cache"
 
 	"github.com/garyburd/redigo/redis"
 )
