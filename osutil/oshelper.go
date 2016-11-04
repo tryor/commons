@@ -1,7 +1,9 @@
 package osutil
 
 import (
+	"net"
 	"os"
+	"strings"
 )
 
 func MkdirAll(path string, mode ...os.FileMode) error {
