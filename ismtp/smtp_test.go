@@ -2,25 +2,20 @@ package ismtp
 
 import (
 	"fmt"
+	"time"
 	//"net/smtp"
 	"testing"
 )
 
-func Test_ismtp(t *testing.T) {
+func test_ismtp(t *testing.T) {
 	auth := LoginAuth(
 		"trywen001@126.com",
 		"123qwe",
 		"smtp.126.com",
 	)
 
-	//auth := LoginAuth(
-	//	"applesabi@126.com",
-	//	"smtpceshi",
-	//	"smtp.126.com",
-	//)
-
 	ctype := fmt.Sprintf("Content-Type: %s; charset=%s", "text/html", "utf-8")
-	msg := fmt.Sprintf("To: %s\r\nCc: %s\r\nFrom: %s\r\nSubject: %s\r\n%s\r\n\r\n%s", "<TTT>trywen@qq.com", "", "TRY<trywen001@126.com>", "Hello", ctype, "<html><body>Hello Hello</body></html>")
+	msg := fmt.Sprintf("To: %s\r\nCc: %s\r\nFrom: %s\r\nSubject: %s\r\n%s\r\n\r\n%s", "trywen@qq.com", "", "trywen001@126.com", "测试(Hello)", ctype, "<html><body>Hello Hello</body></html>")
 
 	err := SendMail(
 		"smtp.126.com:25",
@@ -28,6 +23,31 @@ func Test_ismtp(t *testing.T) {
 		"trywen001@126.com",
 		[]string{"trywen@qq.com"},
 		[]byte(msg),
+		time.Second*10,
+	)
+	if err != nil {
+		fmt.Println(err)
+		t.Error(err)
+	}
+}
+
+func Test_ismtp(t *testing.T) {
+	auth := LoginAuth(
+		"wenjian@tv189.com",
+		"TYSX64394",
+		"smtp.tv189.com",
+	)
+
+	ctype := fmt.Sprintf("Content-Type: %s; charset=%s", "text/html", "utf-8")
+	msg := fmt.Sprintf("To: %s\r\nCc: %s\r\nFrom: %s\r\nSubject: %s\r\n%s\r\n\r\n%s", "trywen@qq.com", "", "trywen001@126.com", "测试(Hello)", ctype, "<html><body>Hello Hello</body></html>")
+
+	err := SendMail(
+		"smtp.tv189.com:25",
+		auth,
+		"wenjian@tv189.com",
+		[]string{"trywen@qq.com"},
+		[]byte(msg),
+		time.Second*10,
 	)
 	if err != nil {
 		fmt.Println(err)
