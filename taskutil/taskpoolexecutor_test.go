@@ -7,17 +7,26 @@ import (
 )
 
 func Test(t *testing.T) {
-	executor := NewTaskPoolExecutor(3, 100)
+	executor := NewTaskPoolExecutor(3, 0)
 	executor.Start()
 
 	for i := 0; i < 10; i++ {
 		executor.Execute(func(p ...interface{}) {
-			fmt.Printf("test ...., %v\n", p...)
-			time.Sleep(time.Millisecond)
+			fmt.Printf("a test ...., %v\n", p...)
+			time.Sleep(time.Millisecond * 100)
 		}, i)
 	}
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * 1)
+
+	for i := 0; i < 10; i++ {
+		executor.Execute(func(p ...interface{}) {
+			fmt.Printf("b test ...., %v\n", p...)
+			time.Sleep(time.Millisecond * 100)
+		}, i)
+	}
+
+	time.Sleep(time.Second * 1)
 
 	executor.CloseAndWait()
 }

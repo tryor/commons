@@ -103,10 +103,9 @@ func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 			this.executeTask(r)
 			atomic.AddInt32(&this.activeCount, -1)
 		} else {
-			//log.Println("[WRN] runable chan is closed!")
+			//log.Println("[WRN] runable chan is closed!", r, ok)
 			return
 		}
-
 	}
 }
 
