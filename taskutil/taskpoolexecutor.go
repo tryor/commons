@@ -3,8 +3,8 @@ package taskutil
 import (
 	"log"
 	"runtime"
+	"sync"
 	"sync/atomic"
-
 	//	log "github.com/alecthomas/log4go"
 )
 
@@ -15,6 +15,8 @@ type TaskPoolExecutor struct {
 	activeCount   int32
 	taskQueueSize int
 	PrintPanic    bool
+	wg            *sync.WaitGroup
+	locker        sync.RWMutex
 }
 
 type runable struct {
@@ -31,6 +33,7 @@ func NewTaskPoolExecutor(engines int, taskQueueSize int) *TaskPoolExecutor {
 	}
 
 	exetor := &TaskPoolExecutor{running: 0, engines: engines, taskQueueSize: taskQueueSize, PrintPanic: true}
+	exetor.wg = &sync.WaitGroup{}
 	return exetor
 }
 
@@ -43,6 +46,9 @@ func (this *TaskPoolExecutor) GetActiveCount() int {
 }
 
 func (this *TaskPoolExecutor) Start() {
+	this.locker.Lock()
+	defer this.locker.Unlock()
+
 	if this.isRunning() {
 		return
 	}
@@ -54,7 +60,22 @@ func (this *TaskPoolExecutor) Start() {
 }
 
 func (this *TaskPoolExecutor) Close() {
-	atomic.StoreInt32(&this.running, 0)
+	this.locker.Lock()
+	defer this.locker.Unlock()
+	if this.isRunning() {
+		atomic.StoreInt32(&this.running, 0)
+		close(this.queueChan)
+	}
+}
+
+//关闭并等待所有任务执行完
+func (this *TaskPoolExecutor) CloseAndWait() {
+	this.Close()
+	this.Wait()
+}
+
+func (this *TaskPoolExecutor) Wait() {
+	this.wg.Wait()
 }
 
 func (this *TaskPoolExecutor) isRunning() bool {
@@ -63,6 +84,8 @@ func (this *TaskPoolExecutor) isRunning() bool {
 
 //安排任务
 func (this *TaskPoolExecutor) Execute(f func(p ...interface{}), p ...interface{}) {
+	this.locker.Lock()
+	defer this.locker.Unlock()
 	if !this.isRunning() {
 		panic("task pool executor not is running!")
 	}
@@ -70,6 +93,9 @@ func (this *TaskPoolExecutor) Execute(f func(p ...interface{}), p ...interface{}
 }
 
 func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
+	this.wg.Add(1)
+	defer this.wg.Done()
+
 	for !(!this.isRunning() && len(runablech) == 0) {
 		r, ok := <-runablech
 		if ok {
@@ -77,12 +103,11 @@ func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 			this.executeTask(r)
 			atomic.AddInt32(&this.activeCount, -1)
 		} else {
-			log.Println("[WRN] runable chan is closed!")
+			//log.Println("[WRN] runable chan is closed!")
 			return
 		}
+
 	}
-	//fmt.Printf("this.isRunning():%v, len(runablech):%v\n", this.isRunning(), len(runablech))
-	close(runablech)
 }
 
 func (this *TaskPoolExecutor) executeTask(runable *runable) {
