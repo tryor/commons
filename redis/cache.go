@@ -1,12 +1,11 @@
-//cache
 package redis
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
 	"time"
 
-	log "github.com/alecthomas/log4go"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -53,7 +52,7 @@ func CacheInit(server, password string, args ...int) {
 			}
 			_, err := c.Do("PING")
 			if err != nil {
-				log.Warn("ping error, %v", err)
+				log.Printf("ping error, %v\n", err)
 				return err
 			}
 			return nil

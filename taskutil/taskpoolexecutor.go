@@ -1,10 +1,11 @@
 package taskutil
 
 import (
+	"log"
 	"runtime"
 	"sync/atomic"
 
-	log "github.com/alecthomas/log4go"
+	//	log "github.com/alecthomas/log4go"
 )
 
 type TaskPoolExecutor struct {
@@ -76,7 +77,7 @@ func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 			this.executeTask(r)
 			atomic.AddInt32(&this.activeCount, -1)
 		} else {
-			log.Warn("runable chan is closed!")
+			log.Println("[WRN] runable chan is closed!")
 			return
 		}
 	}
@@ -87,14 +88,14 @@ func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 func (this *TaskPoolExecutor) executeTask(runable *runable) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("execute task runtime error caught: %v", r)
+			log.Printf("[ERR] execute task runtime error caught: %v/n", r)
 			if this.PrintPanic {
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)
 					if !ok {
 						break
 					}
-					log.Error("%v(%v)", file, line)
+					log.Printf("[ERR] %v(%v)\n", file, line)
 				}
 			}
 		}

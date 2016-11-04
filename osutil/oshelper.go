@@ -18,3 +18,14 @@ func MkdirAll(path string, mode ...os.FileMode) error {
 	}
 	return nil
 }
+
+func GetLocalAddr() string {
+	info, _ := net.InterfaceAddrs()
+	for _, addr := range info {
+		ip := strings.Split(addr.String(), "/")[0]
+		if ip != "0.0.0.0" {
+			return ip
+		}
+	}
+	return ""
+}

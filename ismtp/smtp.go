@@ -19,6 +19,7 @@ import (
 	"net/smtp"
 	"net/textproto"
 	"strings"
+	"time"
 )
 
 // A Client represents a client connection to an SMTP server.
@@ -44,6 +45,16 @@ func Dial(addr string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	host := addr[:strings.Index(addr, ":")]
+	return NewClient(conn, host)
+}
+
+func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
+	conn, err := net.DialTimeout("tcp", addr, timeout)
+	if err != nil {
+		return nil, err
+	}
+	conn.SetDeadline(time.Now().Add(timeout))
 	host := addr[:strings.Index(addr, ":")]
 	return NewClient(conn, host)
 }
@@ -233,8 +244,14 @@ func (c *Client) Data() (io.WriteCloser, error) {
 // SendMail connects to the server at addr, switches to TLS if possible,
 // authenticates with mechanism a if possible, and then sends an email from
 // address from, to addresses to, with message msg.
-func SendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
-	c, err := Dial(addr)
+func SendMail(addr string, a smtp.Auth, from string, to []string, msg []byte, timeout ...time.Duration) error {
+	var c *Client
+	var err error
+	if len(timeout) > 0 {
+		c, err = DialTimeout(addr, timeout[0])
+	} else {
+		c, err = Dial(addr)
+	}
 	if err != nil {
 		return err
 	}
