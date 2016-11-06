@@ -49,7 +49,7 @@ func (this *TaskPoolExecutor) Start() {
 	this.locker.Lock()
 	defer this.locker.Unlock()
 
-	if this.isRunning() {
+	if this.IsRunning() {
 		return
 	}
 	this.running = 1
@@ -62,7 +62,7 @@ func (this *TaskPoolExecutor) Start() {
 func (this *TaskPoolExecutor) Close() {
 	this.locker.Lock()
 	defer this.locker.Unlock()
-	if this.isRunning() {
+	if this.IsRunning() {
 		atomic.StoreInt32(&this.running, 0)
 		close(this.queueChan)
 	}
@@ -78,7 +78,7 @@ func (this *TaskPoolExecutor) Wait() {
 	this.wg.Wait()
 }
 
-func (this *TaskPoolExecutor) isRunning() bool {
+func (this *TaskPoolExecutor) IsRunning() bool {
 	return atomic.LoadInt32(&this.running) > 0
 }
 
@@ -86,7 +86,7 @@ func (this *TaskPoolExecutor) isRunning() bool {
 func (this *TaskPoolExecutor) Execute(f func(p ...interface{}), p ...interface{}) {
 	this.locker.Lock()
 	defer this.locker.Unlock()
-	if !this.isRunning() {
+	if !this.IsRunning() {
 		panic("task pool executor not is running!")
 	}
 	this.queueChan <- &runable{f: f, ps: p}
@@ -96,7 +96,7 @@ func (this *TaskPoolExecutor) startEngine(runablech chan *runable) {
 	this.wg.Add(1)
 	defer this.wg.Done()
 
-	for !(!this.isRunning() && len(runablech) == 0) {
+	for !(!this.IsRunning() && len(runablech) == 0) {
 		r, ok := <-runablech
 		if ok {
 			atomic.AddInt32(&this.activeCount, 1)
