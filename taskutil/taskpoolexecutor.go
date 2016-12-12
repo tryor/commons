@@ -16,7 +16,7 @@ type TaskPoolExecutor struct {
 	taskQueueSize int
 	PrintPanic    bool
 	wg            *sync.WaitGroup
-	locker        sync.RWMutex
+	//locker        sync.RWMutex
 }
 
 type runable struct {
@@ -46,13 +46,13 @@ func (this *TaskPoolExecutor) GetActiveCount() int {
 }
 
 func (this *TaskPoolExecutor) Start() {
-	this.locker.Lock()
-	defer this.locker.Unlock()
+	//this.locker.Lock()
+	//defer this.locker.Unlock()
 
 	if this.IsRunning() {
 		return
 	}
-	this.running = 1
+	atomic.StoreInt32(&this.running, 1)
 	this.queueChan = make(chan *runable, this.taskQueueSize)
 	for i := 0; i < this.engines; i++ {
 		go this.startEngine(this.queueChan)
@@ -60,8 +60,8 @@ func (this *TaskPoolExecutor) Start() {
 }
 
 func (this *TaskPoolExecutor) Close() {
-	this.locker.Lock()
-	defer this.locker.Unlock()
+	//this.locker.Lock()
+	//defer this.locker.Unlock()
 	if this.IsRunning() {
 		atomic.StoreInt32(&this.running, 0)
 		close(this.queueChan)
@@ -84,8 +84,8 @@ func (this *TaskPoolExecutor) IsRunning() bool {
 
 //安排任务
 func (this *TaskPoolExecutor) Execute(f func(p ...interface{}), p ...interface{}) {
-	this.locker.Lock()
-	defer this.locker.Unlock()
+	//this.locker.Lock()
+	//defer this.locker.Unlock()
 	if !this.IsRunning() {
 		panic("task pool executor not is running!")
 	}

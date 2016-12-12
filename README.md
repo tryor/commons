@@ -8,7 +8,7 @@
 ============
 To install:
 
-    go get -u github.com/trygo/util
+    go get -u github.com/tryor/util
 	
 	
 ## List
