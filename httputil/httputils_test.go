@@ -1,4 +1,4 @@
-package ioutil
+package httputil
 
 import (
 	"net/url"

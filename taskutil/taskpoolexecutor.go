@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	//	log "github.com/alecthomas/log4go"
 )
 
 type TaskPoolExecutor struct {
@@ -16,7 +15,6 @@ type TaskPoolExecutor struct {
 	taskQueueSize int
 	PrintPanic    bool
 	wg            *sync.WaitGroup
-	//locker        sync.RWMutex
 }
 
 type runable struct {
@@ -46,9 +44,6 @@ func (this *TaskPoolExecutor) GetActiveCount() int {
 }
 
 func (this *TaskPoolExecutor) Start() {
-	//this.locker.Lock()
-	//defer this.locker.Unlock()
-
 	if this.IsRunning() {
 		return
 	}
@@ -60,8 +55,6 @@ func (this *TaskPoolExecutor) Start() {
 }
 
 func (this *TaskPoolExecutor) Close() {
-	//this.locker.Lock()
-	//defer this.locker.Unlock()
 	if this.IsRunning() {
 		atomic.StoreInt32(&this.running, 0)
 		close(this.queueChan)
@@ -69,7 +62,7 @@ func (this *TaskPoolExecutor) Close() {
 }
 
 //关闭并等待所有任务执行完
-func (this *TaskPoolExecutor) CloseAndWait() {
+func (this *TaskPoolExecutor) Shutdown() {
 	this.Close()
 	this.Wait()
 }
@@ -84,8 +77,6 @@ func (this *TaskPoolExecutor) IsRunning() bool {
 
 //安排任务
 func (this *TaskPoolExecutor) Execute(f func(p ...interface{}), p ...interface{}) {
-	//this.locker.Lock()
-	//defer this.locker.Unlock()
 	if !this.IsRunning() {
 		panic("task pool executor not is running!")
 	}

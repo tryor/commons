@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trygo/beedb"
+	"github.com/tryor/beedb"
 )
 
 var (

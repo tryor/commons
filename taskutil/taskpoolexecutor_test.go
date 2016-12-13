@@ -28,5 +28,5 @@ func Test(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
-	executor.CloseAndWait()
+	executor.Shutdown()
 }
