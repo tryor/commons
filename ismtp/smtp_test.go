@@ -34,7 +34,7 @@ func test_ismtp(t *testing.T) {
 func Test_ismtp(t *testing.T) {
 	auth := LoginAuth(
 		"wenjian@tv189.com",
-		"TYSX64394",
+		"************",
 		"smtp.tv189.com",
 	)
 
