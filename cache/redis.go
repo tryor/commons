@@ -99,8 +99,16 @@ func (rc *redisCache) PutObject(key string, val interface{}, expire ...time.Dura
 	}
 }
 
+func redisBytes(data interface{}, err error) (ret []byte, rerr error) {
+	ret, rerr = redis.Bytes(data, err)
+	if rerr == redis.ErrNil {
+		rerr = ErrNil
+	}
+	return
+}
+
 func (rc *redisCache) GetObject(key string, objptr interface{}) error {
-	b, err := redis.Bytes(rc.do("GET", key))
+	b, err := redisBytes(rc.do("GET", key))
 	if err != nil {
 		return err
 	}
@@ -110,12 +118,21 @@ func (rc *redisCache) GetObject(key string, objptr interface{}) error {
 func (rc *redisCache) Delete(key string) error {
 	return rc.send("DEL", key)
 }
+
+func redisBool(data interface{}, err error) (ret bool, rerr error) {
+	ret, rerr = redis.Bool(data, err)
+	if rerr == redis.ErrNil {
+		rerr = ErrNil
+	}
+	return
+}
+
 func (rc *redisCache) Incr(key string) error {
-	_, err := redis.Bool(rc.do("INCRBY", key, 1))
+	_, err := redisBool(rc.do("INCRBY", key, 1))
 	return err
 }
 func (rc *redisCache) Decr(key string) error {
-	_, err := redis.Bool(rc.do("INCRBY", key, -1))
+	_, err := redisBool(rc.do("INCRBY", key, -1))
 	return err
 }
 func (rc *redisCache) Exists(key string) bool {
@@ -292,7 +309,7 @@ func (m *redisMap) PutObject(key string, val interface{}) error {
 	return m.put(key, b)
 }
 func (m *redisMap) GetObject(key string, valptr interface{}) error {
-	b, err := redis.Bytes(m.rc.do("HGET", m.name, key))
+	b, err := redisBytes(m.rc.do("HGET", m.name, key))
 	if err != nil {
 		return err
 	}
@@ -307,10 +324,10 @@ func (m *redisMap) Delete(key string) error {
 func (m *redisMap) Incr(key string) error {
 	var err error
 	if m.expire == 0 {
-		_, err = redis.Bool(m.rc.do("HINCRBY", m.name, key, 1))
+		_, err = redisBool(m.rc.do("HINCRBY", m.name, key, 1))
 	} else {
 		mapexist := m.rc.Exists(m.name)
-		_, err = redis.Bool(m.rc.do("HINCRBY", m.name, key, 1))
+		_, err = redisBool(m.rc.do("HINCRBY", m.name, key, 1))
 		if err == nil {
 			if !mapexist {
 				err = m.rc.send("EXPIRE", m.name, m.expire)
@@ -323,10 +340,10 @@ func (m *redisMap) Incr(key string) error {
 func (m *redisMap) Decr(key string) error {
 	var err error
 	if m.expire == 0 {
-		_, err = redis.Bool(m.rc.do("HINCRBY", m.name, key, -1))
+		_, err = redisBool(m.rc.do("HINCRBY", m.name, key, -1))
 	} else {
 		mapexist := m.rc.Exists(m.name)
-		_, err = redis.Bool(m.rc.do("HINCRBY", m.name, key, -1))
+		_, err = redisBool(m.rc.do("HINCRBY", m.name, key, -1))
 		if err == nil {
 			if !mapexist {
 				err = m.rc.send("EXPIRE", m.name, m.expire)
