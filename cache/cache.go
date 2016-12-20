@@ -1,168 +1,80 @@
 package cache
 
 import (
-	"container/list"
-	"sync"
+	"errors"
+	"fmt"
 	"time"
 )
 
-type Cache struct {
-	maxEntries int
-	ll         *list.List
-	cache      map[string]*list.Element
-	duration   time.Duration
-	lock       sync.RWMutex
+type Cache interface {
+	Put(key string, val string, expire ...time.Duration) error
+	Get(key string) (string, error)
+	GetMulti(keys []string) ([]string, error)
+
+	PutObject(key string, val interface{}, expire ...time.Duration) error
+	//valptr - object ptr
+	GetObject(key string, valptr interface{}) error
+
+	Delete(key string) error
+	Incr(key string) error
+	Decr(key string) error
+	Exists(key string) bool
+	SetExpire(key string, expire ...time.Duration) error
+	NewMap(name string, expire ...time.Duration) (Map, error)
 }
 
-type entry struct {
-	key     string
-	value   interface{}
-	timeout time.Time
+type Map interface {
+	Put(key string, val string) error
+	Get(key string) (string, error)
+	GetMulti(keys []string) ([]string, error)
+
+	PutObject(key string, val interface{}) error
+	GetObject(key string, valptr interface{}) error
+
+	Delete(key string) error
+	Incr(key string) error
+	Decr(key string) error
+	Exists(key string) bool
+	Size() (int, error)
+	Clear() error
 }
 
-func New(maxEntries int, duration time.Duration) *Cache {
-	var c = &Cache{
-		maxEntries: maxEntries,
-		ll:         list.New(),
-		cache:      make(map[string]*list.Element),
-		duration:   duration,
+type CacheInitializer interface {
+	Init(config string) error
+}
+
+var adapters = make(map[string]func() Cache)
+
+func Register(name string, adapter func() Cache) {
+	if adapter == nil {
+		panic("cache: register adapter is nil")
 	}
-	if duration > 0 {
-		go func() {
-			for {
-				var d = c.check()
-				time.Sleep(d)
-			}
-		}()
-	}
-	return c
-}
-
-func (c *Cache) check() time.Duration {
-	var now = time.Now()
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	for {
-		var ele = c.ll.Back()
-		if ele == nil {
-			return c.duration + 10*time.Second
-		}
-		var timeout = ele.Value.(*entry).timeout
-		if now.Before(timeout) {
-			var dur = timeout.Sub(now)
-			if dur < 10*time.Second {
-				dur = 10 * time.Second
-			}
-			return dur
-		}
-		c.removeElement(ele)
-	}
-}
-
-func (c *Cache) Put(key string, value interface{}, expire ...time.Duration) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.put(key, value)
-}
-
-func (c *Cache) put(key string, value interface{}, expire ...time.Duration) {
-
-	timeout := func() time.Time {
-		if len(expire) > 0 {
-			return time.Now().Add(expire[0])
-		} else {
-			return time.Now().Add(c.duration)
-		}
+	if _, ok := adapters[name]; ok {
+		panic("cache: register called twice for adapter " + name)
 	}
 
-	if ee, ok := c.cache[key]; ok {
-		c.ll.MoveToFront(ee)
-		var v = ee.Value.(*entry)
-		v.value = value
-		v.timeout = timeout() //time.Now().Add(c.duration)
+	adapters[name] = adapter
+}
+
+func NewCache(adapterName, config string) (adapter Cache, err error) {
+	instanceFunc, ok := adapters[adapterName]
+	if !ok {
+		err = fmt.Errorf("cache: unknown adapter name %q", adapterName)
 		return
 	}
-	//var ele = c.ll.PushFront(&entry{key, value, time.Now().Add(c.duration)})
-	var ele = c.ll.PushFront(&entry{key, value, timeout()})
-	c.cache[key] = ele
+	adapter = instanceFunc()
 
-	if c.maxEntries == 0 {
-		return
-	}
-	for c.ll.Len() > c.maxEntries {
-		c.removeOldest()
-	}
-}
-
-func (c *Cache) isExpire(ele *list.Element) bool {
-	return time.Now().After(ele.Value.(*entry).timeout)
-}
-
-func (c *Cache) get(key string) interface{} {
-	if ele, hit := c.cache[key]; hit && !c.isExpire(ele) {
-		c.ll.MoveToFront(ele)
-		return ele.Value.(*entry).value
-	}
-	return nil
-}
-
-//func (c *Cache) GetIfPresent(key string) interface{} {
-//	c.lock.Lock()
-//	defer c.lock.Unlock()
-
-//	return c.get(key)
-//}
-
-func (c *Cache) Exists(key string) bool {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	_, ok := c.cache[key]
-	return ok
-}
-
-func (c *Cache) Get(key string, setter ...func() interface{}) interface{} {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	var v = c.get(key)
-	if v != nil {
-		return v
-	}
-
-	if len(setter) > 0 {
-		v = setter[0]()
-		if v != nil {
-			c.put(key, v)
+	if initor, ok := adapter.(CacheInitializer); ok {
+		err = initor.Init(config)
+		if err != nil {
+			adapter = nil
 		}
+	} else {
+		err = errors.New("Init(config string) not implemented, adapter is " + adapterName)
 	}
-	return v
+	return
 }
 
-func (c *Cache) Remove(key string) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if ele, hit := c.cache[key]; hit {
-		c.removeElement(ele)
-	}
-}
-
-func (c *Cache) removeOldest() {
-	var ele = c.ll.Back()
-	if ele != nil {
-		c.removeElement(ele)
-	}
-}
-
-func (c *Cache) removeElement(e *list.Element) {
-	c.ll.Remove(e)
-	var kv = e.Value.(*entry)
-	delete(c.cache, kv.key)
-}
-
-func (c *Cache) Len() int {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	return c.ll.Len()
-}
+var (
+	ErrNil = errors.New("cache: nil returned")
+)
