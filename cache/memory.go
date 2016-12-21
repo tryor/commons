@@ -183,7 +183,8 @@ func (c *memoryCache) Delete(key string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if _, ok := c.items[key]; !ok {
-		return errors.New("key not exist")
+		//return errors.New("key not exist")
+		return nil
 	}
 	delete(c.items, key)
 	if _, ok := c.items[key]; ok {
@@ -409,7 +410,8 @@ func (m *memoryMap) Delete(key string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if _, ok := m.data[key]; !ok {
-		return errors.New("key not exist")
+		//return errors.New("key not exist")
+		return nil
 	}
 	delete(m.data, key)
 	if _, ok := m.data[key]; ok {
