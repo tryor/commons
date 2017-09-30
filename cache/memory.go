@@ -64,8 +64,21 @@ func (c *memoryCache) gc() {
 		if c.items == nil {
 			return
 		}
-		for name := range c.items {
-			c.itemExpired(name)
+
+		c.itemExpireds()
+		//for name := range c.items {
+		//	c.itemExpired(name)
+		//}
+	}
+}
+
+func (c *memoryCache) itemExpireds() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	for key, itm := range c.items {
+		if itm.isExpire() {
+			delete(c.items, key)
+			return
 		}
 	}
 }
@@ -304,6 +317,8 @@ func (c *memoryCache) NewMap(name string, expire ...time.Duration) (Map, error) 
 	} else if c.defaultExpire > 0 {
 		timeout = c.defaultExpire
 	}
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	itm := c.setExpire(name, timeout)
 	if itm.value == nil {
 		itm.value = newMemoryMap(c, name)
