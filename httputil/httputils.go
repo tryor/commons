@@ -30,7 +30,7 @@ func GetHttpClient(timeout time.Duration) *http.Client {
 				c.SetDeadline(deadline)
 				return c, nil
 			},
-			ResponseHeaderTimeout: time.Second * 5,
+			ResponseHeaderTimeout: time.Second * 10,
 		},
 	}
 	return c
