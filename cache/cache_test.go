@@ -378,7 +378,7 @@ func Test_Memory(t *testing.T) {
 }
 
 func Test_Redis(t *testing.T) {
-	config := `{"addr":"127.0.0.1:6379", "password":"", "dbNum":"0", "maxIdleConns":"9", "idleTimeout":"310", "noTesttime":"61"}`
+	config := `{"addr":"127.0.0.1:6379", "password":"", "dbNum":"0", "maxIdleConns":"9", "connIdleTimeout":"310", "noTesttime":"61", "defaultExpire":"600"}`
 	cache, err := NewCache("redis", config)
 	if err != nil {
 		t.Fatal(err)
