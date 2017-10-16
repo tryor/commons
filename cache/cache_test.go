@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"fmt"
+	//	"fmt"
 	"testing"
 	"time"
 )
@@ -368,7 +368,7 @@ func testL2Cache(t *testing.T, cache Cache, memory Cache, redis Cache) {
 }
 
 func Test_Memory(t *testing.T) {
-	config := `{"gccyc":1}`
+	config := `{"gccyc":60}`
 	cache, err := NewCache("memory", config)
 	if err != nil {
 		t.Fatal(err)
@@ -402,6 +402,35 @@ func testMap(t *testing.T, cache Cache, p string) {
 	if mv1 != rmv1 {
 		t.Fatalf("%s != %s", mv1, rmv1)
 	}
+
+	time.Sleep(time.Second * 1)
+	m, err = cache.NewMap(p+"_map001", time.Second*4, time.Second*6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rmv1, err = m.Get("mv1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(mv1)
+	if mv1 != rmv1 {
+		t.Fatalf("%s != %s", mv1, rmv1)
+	}
+
+	time.Sleep(time.Second * 6)
+	m, err = cache.NewMap(p+"_map001", time.Second*4, time.Second*6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rmv1, err = m.Get("mv1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(mv1)
+	if mv1 != rmv1 {
+		t.Fatalf("%s != %s", mv1, rmv1)
+	}
+
 	objv := V{"test map ...", 678, 890.455}
 	err = m.PutObject("mobj1", &objv)
 	if err != nil {

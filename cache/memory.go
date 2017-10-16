@@ -290,7 +290,7 @@ func (c *memoryCache) Exists(key string) bool {
 
 func (c *memoryCache) setExpire(key string, expire time.Duration) *memoryEntry {
 	var me *memoryEntry
-	if itm, ok := c.items[key]; ok {
+	if itm, ok := c.items[key]; ok && !itm.isExpire() {
 		itm.createdtime = time.Now()
 		itm.expire = expire
 		me = itm
