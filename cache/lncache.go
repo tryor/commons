@@ -81,7 +81,15 @@ func (lc *l2Cache) Get(key string) (string, error) {
 func (lc *l2Cache) GetMulti(keys []string) ([]string, error) {
 	vs, err := lc.c1.GetMulti(keys)
 	if err == nil {
-		return vs, nil
+		nullNums := 0
+		for i := 0; i < len(vs); i++ {
+			if vs[i] == "" {
+				nullNums++
+			}
+		}
+		if nullNums < len(vs) {
+			return vs, nil
+		}
 	}
 	vs, err = lc.c2.GetMulti(keys)
 	if err == nil {
@@ -207,7 +215,15 @@ func (m *l2CacheMap) Get(key string) (string, error) {
 func (m *l2CacheMap) GetMulti(keys []string) ([]string, error) {
 	vs, err := m.m1.GetMulti(keys)
 	if err == nil {
-		return vs, nil
+		nullNums := 0
+		for i := 0; i < len(vs); i++ {
+			if vs[i] == "" {
+				nullNums++
+			}
+		}
+		if nullNums < len(vs) {
+			return vs, nil
+		}
 	}
 	vs, err = m.m2.GetMulti(keys)
 	if err == nil {

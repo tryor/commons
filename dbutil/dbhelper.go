@@ -80,7 +80,7 @@ func Transaction(db *sql.DB, f func(tx *sql.Tx) error) (err error) {
 }
 
 //count records
-func Count(db *sql.DB, table string, where string, params ...interface{}) (int64, error) {
+func Count(db beedb.DB, table string, where string, params ...interface{}) (int64, error) {
 	if strings.TrimSpace(where) != "" {
 		return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
 	} else {
@@ -89,7 +89,7 @@ func Count(db *sql.DB, table string, where string, params ...interface{}) (int64
 }
 
 //count records
-func CountQuery(db *sql.DB, sql string, params ...interface{}) (int64, error) {
+func CountQuery(db beedb.DB, sql string, params ...interface{}) (int64, error) {
 
 	if beedb.OnDebug {
 		log.Println(sql)
@@ -129,7 +129,7 @@ func CountQuery(db *sql.DB, sql string, params ...interface{}) (int64, error) {
 	return 0, nil
 }
 
-func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interface{}) error {
+func FindAll(db beedb.DB, rowsSlicePtr interface{}, sql string, params ...interface{}) error {
 	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
 	if sliceValue.Kind() != reflect.Slice {
 		return errors.New("needs a pointer to a slice")
@@ -144,8 +144,8 @@ func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interfa
 
 	for _, results := range resultsSlice {
 		newValue := reflect.New(sliceElementType)
-		//err := beedb.ScanMapIntoStruct(newValue.Interface(), results)
-		err := ScanMapIntoStruct(newValue.Interface(), results)
+		err := beedb.ScanMapIntoStruct(newValue.Interface(), results)
+		//err := ScanMapIntoStruct(newValue.Interface(), results)
 		if err != nil {
 			return err
 		}
@@ -154,7 +154,7 @@ func FindAll(db *sql.DB, rowsSlicePtr interface{}, sql string, params ...interfa
 	return nil
 }
 
-func FindMap(db *sql.DB, sql string, params ...interface{}) (resultsSlice []map[string][]byte, err error) {
+func FindMap(db beedb.DB, sql string, params ...interface{}) (resultsSlice []map[string][]byte, err error) {
 
 	if beedb.OnDebug {
 		log.Println(sql)

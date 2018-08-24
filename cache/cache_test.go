@@ -423,13 +423,12 @@ func testMap(t *testing.T, cache Cache, p string) {
 		t.Fatal(err)
 	}
 	rmv1, err = m.Get("mv1")
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
 	}
-	t.Log(mv1)
-	if mv1 != rmv1 {
-		t.Fatalf("%s != %s", mv1, rmv1)
-	}
+	t.Log(err)
+
+	m.Put("mv1", mv1)
 
 	objv := V{"test map ...", 678, 890.455}
 	err = m.PutObject("mobj1", &objv)
