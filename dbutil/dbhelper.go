@@ -82,14 +82,18 @@ func Transaction(db *sql.DB, f func(tx *sql.Tx) error) (err error) {
 //count records
 func Count(db beedb.DB, table string, where string, params ...interface{}) (int64, error) {
 	if strings.TrimSpace(where) != "" {
-		return CountQuery(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
+		return ReadInt(db, fmt.Sprint("select count(*) from ", table, " where ", where), params...)
 	} else {
-		return CountQuery(db, "select count(*) from "+table)
+		return ReadInt(db, "select count(*) from "+table)
 	}
 }
 
 //count records
 func CountQuery(db beedb.DB, sql string, params ...interface{}) (int64, error) {
+	return ReadInt(db, sql, params...)
+}
+
+func ReadInt(db beedb.DB, sql string, params ...interface{}) (int64, error) {
 
 	if beedb.OnDebug {
 		log.Println(sql)
@@ -108,23 +112,23 @@ func CountQuery(db beedb.DB, sql string, params ...interface{}) (int64, error) {
 	defer res.Close()
 
 	if res.Next() {
-		var countResults []interface{}
-		var countResult interface{}
-		countResults = append(countResults, &countResult)
-		if err := res.Scan(countResults...); err != nil {
+		var results []interface{}
+		var result interface{}
+		results = append(results, &result)
+		if err := res.Scan(results...); err != nil {
 			return 0, err
 		}
-		rawValue := reflect.Indirect(reflect.ValueOf(countResult))
+		rawValue := reflect.Indirect(reflect.ValueOf(result))
 		aa := reflect.TypeOf(rawValue.Interface())
 		vv := reflect.ValueOf(rawValue.Interface())
-		var countVal int64 = 0
+		var val int64 = 0
 		switch aa.Kind() {
 		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			countVal = vv.Int()
+			val = vv.Int()
 		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			countVal = int64(vv.Uint())
+			val = int64(vv.Uint())
 		}
-		return countVal, nil
+		return val, nil
 	}
 	return 0, nil
 }
@@ -144,8 +148,8 @@ func FindAll(db beedb.DB, rowsSlicePtr interface{}, sql string, params ...interf
 
 	for _, results := range resultsSlice {
 		newValue := reflect.New(sliceElementType)
-		err := beedb.ScanMapIntoStruct(newValue.Interface(), results)
-		//err := ScanMapIntoStruct(newValue.Interface(), results)
+		//err := beedb.ScanMapIntoStruct(newValue.Interface(), results)
+		err := ScanMapIntoStruct(newValue.Interface(), results)
 		if err != nil {
 			return err
 		}
