@@ -30,10 +30,46 @@ func GetHttpClient(timeout time.Duration) *http.Client {
 				c.SetDeadline(deadline)
 				return c, nil
 			},
-			ResponseHeaderTimeout: time.Second * 10,
+			ResponseHeaderTimeout: time.Second * timeout,
 		},
 	}
 	return c
+}
+
+func HttpRequest(req *http.Request, client ...*http.Client) (code int, status string, body string, header http.Header, err error) {
+	var resp *http.Response
+	var httpClient *http.Client
+	if len(client) > 0 {
+		httpClient = client[0]
+	} else {
+		httpClient = DefaultClient
+	}
+
+	resp, err = httpClient.Do(req)
+
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
+	if err != nil {
+		return
+	}
+
+	code = resp.StatusCode
+	status = resp.Status
+	header = resp.Header
+
+	if resp.Body != nil {
+		var data []byte
+		data, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return
+		}
+		body = string(data)
+	}
+
+	return
 }
 
 func HttpPost(sendurl string, reqbody io.Reader, bodytype string, client ...*http.Client) (code int, status string, body string, err error) {
